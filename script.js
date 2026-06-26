@@ -204,6 +204,18 @@ function normalize(value) {
   return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function splitAnswer(value = "") {
+  return value.split("|").map(normalize);
+}
+
+function areOrderedValuesEqual(left, right) {
+  return left.length === right.length && left.every((item, index) => item === right[index]);
+}
+
+function areSortedValuesEqual(left, right) {
+  return areOrderedValuesEqual([...left].sort(), [...right].sort());
+}
+
 function isSolved(chapter) {
   return sessionStorage.getItem(STORAGE.solved(chapter)) === "1";
 }
@@ -241,6 +253,12 @@ function completedCount() {
   return Array.from({ length: TOTAL_CHAPTERS }, (_, index) => index + 1).filter((chapter) =>
     isCompleted(chapter)
   ).length;
+}
+
+function everyChapterCompleted() {
+  return Array.from({ length: TOTAL_CHAPTERS }, (_, index) => index + 1).every((chapter) =>
+    isCompleted(chapter)
+  );
 }
 
 function getNextStep() {
@@ -417,6 +435,30 @@ function renderBadges() {
     .join("");
 }
 
+function enhanceStoryVideo(meta) {
+  const hero = document.querySelector(".story-hero");
+  const iframe = hero?.querySelector("iframe");
+
+  if (!hero || !iframe || iframe.closest(".story-video-shell")) {
+    return;
+  }
+
+  // This wrapper gives every YouTube embed the same layout and makes the video feel like part of the chapter design.
+  const videoShell = document.createElement("section");
+  videoShell.className = "story-video-shell";
+  videoShell.innerHTML = `
+    <div class="story-video-copy">
+      <span class="story-video-kicker">Story Video</span>
+      <h3>Watch ${meta.shortTitle} come to life</h3>
+      <p>A short visual retelling to help beginners connect the written chapter with the legend on screen.</p>
+    </div>
+    <div class="story-video-frame"></div>
+  `;
+
+  videoShell.querySelector(".story-video-frame")?.appendChild(iframe);
+  hero.appendChild(videoShell);
+}
+
 function enhanceStoryPage() {
   const page = document.body.dataset.page;
   if (page !== "story") {
@@ -448,6 +490,8 @@ function enhanceStoryPage() {
       </div>
     `
   );
+
+  enhanceStoryVideo(meta);
 
   if (box && !document.querySelector(".chapter-stamp")) {
     box.insertAdjacentHTML(
@@ -488,6 +532,272 @@ function initOpeningScene() {
   });
 }
 
+function createPuzzleContext(card, options = {}) {
+  const chapter = options.chapter ?? Number(card.dataset.chapter);
+  const gated = options.gated ?? true;
+  const status = card.querySelector("[data-status]");
+  const unlockLink = card.querySelector("[data-unlock-link]");
+  const reveal = card.querySelector("[data-reveal]");
+  const lockedNote = card.querySelector("[data-locked-note]");
+
+  const markSolved = (message) => {
+    if (chapter) {
+      setSolved(chapter);
+    }
+
+    card.classList.remove("locked");
+    card.classList.add("just-solved");
+    window.setTimeout(() => card.classList.remove("just-solved"), 900);
+    setPuzzleDisabled(card, false);
+    setStatus(status, message, "success");
+    AudioEngine.success();
+
+    if (unlockLink) {
+      unlockLink.hidden = false;
+    }
+
+    if (reveal) {
+      reveal.hidden = false;
+    }
+
+    if (lockedNote) {
+      lockedNote.hidden = true;
+    }
+
+    renderContinueJourney();
+    injectProgressTracker();
+  };
+
+  return {
+    card,
+    chapter,
+    gated,
+    status,
+    unlockLink,
+    reveal,
+    lockedNote,
+    markSolved,
+  };
+}
+
+function bindTextLikePuzzle(context, messages) {
+  const input = context.card.querySelector("[data-answer-input]");
+  const button = context.card.querySelector("[data-check]");
+
+  button?.addEventListener("click", () => {
+    const correct = normalize(input?.value) === normalize(context.card.dataset.answer);
+
+    if (correct) {
+      context.markSolved(messages.successMessage);
+      return;
+    }
+
+    setStatus(context.status, messages.errorMessage, "error");
+    AudioEngine.error();
+  });
+}
+
+function bindSequencePuzzle(context) {
+  const buttons = [...context.card.querySelectorAll("[data-step]")];
+  const progress = context.card.querySelector("[data-progress]");
+  const answer = splitAnswer(context.card.dataset.answer);
+  let picks = [];
+
+  const render = () => {
+    if (progress) {
+      progress.textContent = `Current order: ${picks.join(" → ") || "none"}`;
+    }
+  };
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      picks.push(normalize(button.dataset.step));
+      button.disabled = true;
+      render();
+
+      const latest = picks[picks.length - 1];
+      const matchesPrefix = answer.slice(0, picks.length).every((item, index) => item === picks[index]);
+
+      if (!matchesPrefix) {
+        picks = [];
+        buttons.forEach((element) => {
+          element.disabled = false;
+        });
+        render();
+        setStatus(context.status, "Wrong order. The puzzle reset.", "error");
+        AudioEngine.error();
+        return;
+      }
+
+      if (picks.length === answer.length) {
+        context.markSolved("Sequence solved. Open the story chapter.");
+        return;
+      }
+
+      setStatus(context.status, `Good. Next step after: ${latest}`);
+    });
+  });
+
+  render();
+}
+
+function bindMultiSelectPuzzle(context) {
+  const checkboxes = [...context.card.querySelectorAll("[data-option-box]")];
+  const button = context.card.querySelector("[data-check]");
+  const answer = splitAnswer(context.card.dataset.answer);
+
+  button?.addEventListener("click", () => {
+    const chosen = checkboxes
+      .filter((box) => box.checked)
+      .map((box) => normalize(box.value));
+
+    if (areSortedValuesEqual(chosen, answer)) {
+      context.markSolved("Correct. Open the story chapter.");
+      return;
+    }
+
+    setStatus(context.status, "Incorrect selection. Try again.", "error");
+    AudioEngine.error();
+  });
+}
+
+function bindMatchPuzzle(context) {
+  const selects = [...context.card.querySelectorAll(".match-select")];
+  const button = context.card.querySelector("[data-check]");
+
+  button?.addEventListener("click", () => {
+    const correct = selects.every((select) => select.value === select.dataset.ans);
+
+    if (correct) {
+      context.markSolved("Solved. Open the story chapter.");
+      return;
+    }
+
+    setStatus(context.status, "Not quite. Try again.", "error");
+    AudioEngine.error();
+  });
+}
+
+function bindSingleChoicePuzzle(context) {
+  const button = context.card.querySelector("[data-check]");
+
+  button?.addEventListener("click", () => {
+    const selected = context.card.querySelector('input[type="radio"]:checked');
+    const correct = normalize(selected?.value) === normalize(context.card.dataset.answer);
+
+    if (correct) {
+      context.markSolved("Solved. Open the story chapter.");
+      return;
+    }
+
+    setStatus(context.status, "Not quite. Try again.", "error");
+    AudioEngine.error();
+  });
+}
+
+function bindWordPuzzle(context) {
+  const wordTarget = normalize(context.card.dataset.answer);
+  const letterButtons = [...context.card.querySelectorAll(".word-btn")];
+  const wordDisplay = context.card.querySelector("[data-word]");
+  const button = context.card.querySelector("[data-check]");
+
+  const renderWord = () => {
+    const currentWord = letterButtons
+      .filter((element) => element.classList.contains("active"))
+      .map((element) => element.dataset.val || "")
+      .join("");
+
+    if (wordDisplay) {
+      wordDisplay.textContent = currentWord;
+    }
+
+    return currentWord;
+  };
+
+  letterButtons.forEach((letterButton) => {
+    letterButton.addEventListener("click", () => {
+      letterButton.classList.toggle("active");
+      renderWord();
+    });
+  });
+
+  button?.addEventListener("click", () => {
+    if (normalize(renderWord()) === wordTarget) {
+      context.markSolved("Solved. Open the story chapter.");
+      return;
+    }
+
+    setStatus(context.status, "Wrong combination. Try again.", "error");
+    AudioEngine.error();
+  });
+}
+
+function bindFillBlankPuzzle(context) {
+  const button = context.card.querySelector("[data-check]");
+  const answer = splitAnswer(context.card.dataset.answer);
+
+  button?.addEventListener("click", () => {
+    const blanks = [
+      normalize(context.card.querySelector('[data-blank="1"]')?.value),
+      normalize(context.card.querySelector('[data-blank="2"]')?.value),
+    ];
+
+    if (areOrderedValuesEqual(blanks, answer)) {
+      context.markSolved("Solved. Open the story chapter.");
+      return;
+    }
+
+    setStatus(context.status, "Not quite. Check your facts.", "error");
+    AudioEngine.error();
+  });
+}
+
+function wirePuzzleCard(card, options, puzzleBinders) {
+  const context = createPuzzleContext(card, options);
+  const { chapter, gated, status, unlockLink, reveal, lockedNote } = context;
+  const solved = chapter ? isSolved(chapter) : false;
+  const requiredComplete = !gated || chapter === 1 ? true : isCompleted(chapter - 1);
+
+  if (gated && !requiredComplete) {
+    card.classList.add("locked");
+    setPuzzleDisabled(card, true);
+    setStatus(status, `Finish Chapter ${chapter - 1} to unlock this puzzle.`);
+
+    if (unlockLink) {
+      unlockLink.hidden = true;
+    }
+
+    if (reveal) {
+      reveal.hidden = true;
+    }
+
+    if (lockedNote) {
+      lockedNote.hidden = false;
+    }
+
+    return;
+  }
+
+  if (!solved && gated && chapter > 1) {
+    card.classList.add("newly-unlocked");
+  }
+
+  card.classList.remove("locked");
+  setPuzzleDisabled(card, false);
+
+  if (lockedNote) {
+    lockedNote.hidden = true;
+  }
+
+  if (solved) {
+    context.markSolved(chapter ? "Solved. Open the story chapter." : "Bonus lore revealed.");
+    return;
+  }
+
+  setStatus(status, chapter === 1 ? "Solve this to unlock Chapter 1." : `Chapter ${chapter} is ready.`);
+  puzzleBinders[card.dataset.puzzle]?.(context);
+}
+
 function initHome() {
   const completionBanner = document.querySelector("[data-completion-banner]");
 
@@ -495,271 +805,39 @@ function initHome() {
   renderContinueJourney();
   renderBadges();
 
-  const wirePuzzle = (card, options = {}) => {
-    const chapter = options.chapter ?? Number(card.dataset.chapter);
-    const gated = options.gated ?? true;
-    const solved = chapter ? isSolved(chapter) : false;
-    const requiredComplete = !gated || chapter === 1 ? true : isCompleted(chapter - 1);
-    const status = card.querySelector("[data-status]");
-    const unlockLink = card.querySelector("[data-unlock-link]");
-    const reveal = card.querySelector("[data-reveal]");
-    const lockedNote = card.querySelector("[data-locked-note]");
-    const puzzle = card.dataset.puzzle;
-
-    const markSolved = (message) => {
-      if (chapter) {
-        setSolved(chapter);
-      }
-
-      card.classList.remove("locked");
-      card.classList.add("just-solved");
-      window.setTimeout(() => card.classList.remove("just-solved"), 900);
-      setPuzzleDisabled(card, false);
-      setStatus(status, message, "success");
-      AudioEngine.success();
-
-      if (unlockLink) {
-        unlockLink.hidden = false;
-      }
-
-      if (reveal) {
-        reveal.hidden = false;
-      }
-
-      if (lockedNote) {
-        lockedNote.hidden = true;
-      }
-
-      renderContinueJourney();
-      injectProgressTracker();
-    };
-
-    if (gated && !requiredComplete) {
-      card.classList.add("locked");
-      setPuzzleDisabled(card, true);
-      setStatus(status, `Finish Chapter ${chapter - 1} to unlock this puzzle.`);
-
-      if (unlockLink) {
-        unlockLink.hidden = true;
-      }
-
-      if (reveal) {
-        reveal.hidden = true;
-      }
-
-      if (lockedNote) {
-        lockedNote.hidden = false;
-      }
-
-      return;
-    }
-
-    if (!solved && gated && chapter > 1) {
-      card.classList.add("newly-unlocked");
-    }
-
-    card.classList.remove("locked");
-    setPuzzleDisabled(card, false);
-
-    if (lockedNote) {
-      lockedNote.hidden = true;
-    }
-
-    if (solved) {
-      markSolved(chapter ? "Solved. Open the story chapter." : "Bonus lore revealed.");
-      return;
-    }
-
-    if (puzzle === "text" || puzzle === "code") {
-      const input = card.querySelector("[data-answer-input]");
-      const button = card.querySelector("[data-check]");
-
-      button?.addEventListener("click", () => {
-        const correct = normalize(input?.value) === normalize(card.dataset.answer);
-        if (correct) {
-          markSolved(
-            puzzle === "code" ? "Code accepted. Open the story chapter." : "Solved. Open the story chapter."
-          );
-          return;
-        }
-
-        setStatus(status, puzzle === "code" ? "Wrong code." : "Not quite. Try again.", "error");
-        AudioEngine.error();
+  // Keep puzzle behavior in a lookup table so each game type stays small and easier to edit.
+  const puzzleBinders = {
+    text(context) {
+      bindTextLikePuzzle(context, {
+        successMessage: "Solved. Open the story chapter.",
+        errorMessage: "Not quite. Try again.",
       });
-    }
-
-    if (puzzle === "sequence") {
-      const buttons = [...card.querySelectorAll("[data-step]")];
-      const progress = card.querySelector("[data-progress]");
-      const answer = (card.dataset.answer || "").split("|").map(normalize);
-      let picks = [];
-
-      const render = () => {
-        if (progress) {
-          progress.textContent = `Current order: ${picks.join(" → ") || "none"}`;
-        }
-      };
-
-      buttons.forEach((button) => {
-        button.addEventListener("click", () => {
-          picks.push(normalize(button.dataset.step));
-          button.disabled = true;
-          render();
-
-          const latest = picks[picks.length - 1];
-          const matchesPrefix = answer.slice(0, picks.length).every((item, index) => item === picks[index]);
-
-          if (!matchesPrefix) {
-            picks = [];
-            buttons.forEach((element) => {
-              element.disabled = false;
-            });
-            render();
-            setStatus(status, "Wrong order. The puzzle reset.", "error");
-            AudioEngine.error();
-            return;
-          }
-
-          if (picks.length === answer.length) {
-            markSolved("Sequence solved. Open the story chapter.");
-            return;
-          }
-
-          setStatus(status, `Good. Next step after: ${latest}`);
-        });
+    },
+    code(context) {
+      bindTextLikePuzzle(context, {
+        successMessage: "Code accepted. Open the story chapter.",
+        errorMessage: "Wrong code.",
       });
-
-      render();
-    }
-
-    if (puzzle === "multi") {
-      const checkboxes = [...card.querySelectorAll("[data-option-box]")];
-      const button = card.querySelector("[data-check]");
-      const answer = (card.dataset.answer || "").split("|").map(normalize).sort();
-
-      button?.addEventListener("click", () => {
-        const chosen = checkboxes
-          .filter((box) => box.checked)
-          .map((box) => normalize(box.value))
-          .sort();
-
-        const correct = chosen.length === answer.length && chosen.every((item, index) => item === answer[index]);
-
-        if (correct) {
-          markSolved("Correct. Open the story chapter.");
-          return;
-        }
-
-        setStatus(status, "Incorrect selection. Try again.", "error");
-        AudioEngine.error();
-      });
-    }
-
-    if (puzzle === "match") {
-      const selects = [...card.querySelectorAll(".match-select")];
-      const button = card.querySelector("[data-check]");
-
-      button?.addEventListener("click", () => {
-        const correct = selects.every((select) => select.value === select.dataset.ans);
-
-        if (correct) {
-          markSolved("Solved. Open the story chapter.");
-          return;
-        }
-
-        setStatus(status, "Not quite. Try again.", "error");
-        AudioEngine.error();
-      });
-    }
-
-    if (puzzle === "mcq" || puzzle === "scenario") {
-      const button = card.querySelector("[data-check]");
-
-      button?.addEventListener("click", () => {
-        const selected = card.querySelector('input[type="radio"]:checked');
-        const correct = normalize(selected?.value) === normalize(card.dataset.answer);
-
-        if (correct) {
-          markSolved("Solved. Open the story chapter.");
-          return;
-        }
-
-        setStatus(status, "Not quite. Try again.", "error");
-        AudioEngine.error();
-      });
-    }
-
-    if (puzzle === "wordsearch") {
-      const wordTarget = normalize(card.dataset.answer);
-      const letterButtons = [...card.querySelectorAll(".word-btn")];
-      const wordDisplay = card.querySelector("[data-word]");
-      const button = card.querySelector("[data-check]");
-
-      const renderWord = () => {
-        const currentWord = letterButtons
-          .filter((element) => element.classList.contains("active"))
-          .map((element) => element.dataset.val || "")
-          .join("");
-
-        if (wordDisplay) {
-          wordDisplay.textContent = currentWord;
-        }
-
-        return currentWord;
-      };
-
-      letterButtons.forEach((letterButton) => {
-        letterButton.addEventListener("click", () => {
-          letterButton.classList.toggle("active");
-          renderWord();
-        });
-      });
-
-      button?.addEventListener("click", () => {
-        const currentWord = normalize(renderWord());
-
-        if (currentWord === wordTarget) {
-          markSolved("Solved. Open the story chapter.");
-          return;
-        }
-
-        setStatus(status, "Wrong combination. Try again.", "error");
-        AudioEngine.error();
-      });
-    }
-
-    if (puzzle === "fill-blank") {
-      const button = card.querySelector("[data-check]");
-      const answer = (card.dataset.answer || "").split("|").map(normalize);
-
-      button?.addEventListener("click", () => {
-        const blank1 = normalize(card.querySelector('[data-blank="1"]')?.value);
-        const blank2 = normalize(card.querySelector('[data-blank="2"]')?.value);
-        const correct = blank1 === answer[0] && blank2 === answer[1];
-
-        if (correct) {
-          markSolved("Solved. Open the story chapter.");
-          return;
-        }
-
-        setStatus(status, "Not quite. Check your facts.", "error");
-        AudioEngine.error();
-      });
-    }
+    },
+    sequence: bindSequencePuzzle,
+    multi: bindMultiSelectPuzzle,
+    match: bindMatchPuzzle,
+    mcq: bindSingleChoicePuzzle,
+    scenario: bindSingleChoicePuzzle,
+    wordsearch: bindWordPuzzle,
+    "fill-blank": bindFillBlankPuzzle,
   };
 
   document.querySelectorAll("[data-chapter-card]").forEach((card) => {
-    wirePuzzle(card, { chapter: Number(card.dataset.chapter), gated: true });
+    wirePuzzleCard(card, { chapter: Number(card.dataset.chapter), gated: true }, puzzleBinders);
   });
 
   document.querySelectorAll("[data-bonus-card]").forEach((card) => {
-    wirePuzzle(card, { gated: false });
+    wirePuzzleCard(card, { gated: false }, puzzleBinders);
   });
 
   if (completionBanner) {
-    completionBanner.hidden = !Array.from({ length: TOTAL_CHAPTERS }, (_, index) => index + 1).every((chapter) =>
-      isCompleted(chapter)
-    );
+    completionBanner.hidden = !everyChapterCompleted();
   }
 }
 
@@ -843,15 +921,11 @@ document.addEventListener("DOMContentLoaded", () => {
   enhanceStoryPage();
   initOpeningScene();
 
-  if (document.body.dataset.page === "home") {
-    initHome();
-  }
+  const pageInitializers = {
+    home: initHome,
+    story: initStory,
+    final: initFinalPage,
+  };
 
-  if (document.body.dataset.page === "story") {
-    initStory();
-  }
-
-  if (document.body.dataset.page === "final") {
-    initFinalPage();
-  }
+  pageInitializers[document.body.dataset.page]?.();
 });
