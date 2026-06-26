@@ -4,7 +4,6 @@ const STORAGE = {
   introSeen: "legendhunter.intro.seen",
   solved: (n) => `legendhunter.chapter.${n}.solved`,
   completed: (n) => `legendhunter.chapter.${n}.completed`,
-  audioEnabled: "legendhunter.audio.enabled",
 };
 
 const CHAPTERS = {
@@ -270,137 +269,19 @@ function getNextStep() {
   };
 }
 
-const AudioEngine = (() => {
-  let context;
-  let masterGain;
-  let ambientGain;
-  let audioUnlocked = false;
-  let ambientInterval;
-
-  function isEnabled() {
-    return sessionStorage.getItem(STORAGE.audioEnabled) === "1";
-  }
-
-  function createContext() {
-    if (!context) {
-      context = new (window.AudioContext || window.webkitAudioContext)();
-      masterGain = context.createGain();
-      masterGain.gain.value = 0.18;
-      masterGain.connect(context.destination);
-    }
-  }
-
-  async function unlock() {
-    createContext();
-    if (context.state === "suspended") {
-      await context.resume();
-    }
-    audioUnlocked = true;
-  }
-
-  function playTone({ frequency = 440, duration = 0.18, type = "sine", volume = 0.08, when = 0 } = {}) {
-    if (!audioUnlocked || !isEnabled()) {
-      return;
-    }
-
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    const startAt = context.currentTime + when;
-
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, startAt);
-    gain.gain.setValueAtTime(0.0001, startAt);
-    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-
-    oscillator.connect(gain);
-    gain.connect(masterGain);
-    oscillator.start(startAt);
-    oscillator.stop(startAt + duration + 0.03);
-  }
-
-  function startAmbient() {
-    if (!audioUnlocked || !isEnabled()) {
-      return;
-    }
-
-    if (ambientGain) {
-      return;
-    }
-
-    ambientGain = context.createGain();
-    ambientGain.gain.value = 0.045;
-    ambientGain.connect(masterGain);
-
-    const pad = context.createOscillator();
-    pad.type = "triangle";
-    pad.frequency.value = 164.81;
-    pad.connect(ambientGain);
-    pad.start();
-
-    const shimmer = context.createOscillator();
-    shimmer.type = "sine";
-    shimmer.frequency.value = 246.94;
-    shimmer.connect(ambientGain);
-    shimmer.start();
-
-    ambientGain._nodes = [pad, shimmer];
-
-    ambientInterval = window.setInterval(() => {
-      playTone({ frequency: 329.63, duration: 1.6, volume: 0.018, type: "sine" });
-      playTone({ frequency: 392, duration: 1.2, volume: 0.012, type: "triangle", when: 0.3 });
-    }, 4200);
-  }
-
-  function stopAmbient() {
-    if (ambientInterval) {
-      window.clearInterval(ambientInterval);
-      ambientInterval = undefined;
-    }
-
-    if (ambientGain?._nodes) {
-      ambientGain._nodes.forEach((node) => {
-        try {
-          node.stop();
-        } catch {
-          return undefined;
-        }
-      });
-    }
-
-    ambientGain?.disconnect();
-    ambientGain = undefined;
-  }
-
-  function setEnabled(enabled) {
-    sessionStorage.setItem(STORAGE.audioEnabled, enabled ? "1" : "0");
-
-    if (!enabled) {
-      stopAmbient();
-      return;
-    }
-
-    unlock().then(() => {
-      startAmbient();
-    });
-  }
-
-  return {
-    isEnabled,
-    unlock,
-    startAmbient,
-    stopAmbient,
-    setEnabled,
-    success() {
-      playTone({ frequency: 523.25, duration: 0.16, type: "triangle", volume: 0.07 });
-      playTone({ frequency: 659.25, duration: 0.22, type: "triangle", volume: 0.06, when: 0.08 });
-    },
-    error() {
-      playTone({ frequency: 220, duration: 0.14, type: "sawtooth", volume: 0.05 });
-      playTone({ frequency: 185, duration: 0.2, type: "sawtooth", volume: 0.04, when: 0.04 });
-    },
-  };
-})();
+const AudioEngine = {
+  isEnabled() {
+    return false;
+  },
+  unlock() {
+    return Promise.resolve();
+  },
+  startAmbient() {},
+  stopAmbient() {},
+  setEnabled() {},
+  success() {},
+  error() {},
+};
 
 function buildProgressMarkup(page, currentChapter = 0) {
   const completed = completedCount();
@@ -469,34 +350,6 @@ function injectProgressTracker() {
       mainContainer.insertAdjacentHTML("afterbegin", markup);
     }
   }
-}
-
-function injectSoundToggle() {
-  if (document.querySelector("[data-audio-toggle]")) {
-    return;
-  }
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "sound-toggle";
-  button.setAttribute("data-audio-toggle", "");
-
-  const render = () => {
-    button.textContent = AudioEngine.isEnabled() ? "Sound: On" : "Sound: Off";
-  };
-
-  render();
-
-  button.addEventListener("click", async () => {
-    const next = !AudioEngine.isEnabled();
-    if (next) {
-      await AudioEngine.unlock();
-    }
-    AudioEngine.setEnabled(next);
-    render();
-  });
-
-  document.body.appendChild(button);
 }
 
 function decorateQuizCards() {
@@ -986,24 +839,9 @@ function initFinalPage() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (!sessionStorage.getItem(STORAGE.audioEnabled)) {
-    sessionStorage.setItem(STORAGE.audioEnabled, "1");
-  }
-
-  injectSoundToggle();
   injectProgressTracker();
   enhanceStoryPage();
   initOpeningScene();
-
-  if (AudioEngine.isEnabled() && document.body.dataset.page !== "home") {
-    document.addEventListener(
-      "click",
-      () => {
-        AudioEngine.unlock().then(() => AudioEngine.startAmbient());
-      },
-      { once: true }
-    );
-  }
 
   if (document.body.dataset.page === "home") {
     initHome();
