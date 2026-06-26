@@ -426,13 +426,31 @@ function renderBadges() {
       const done = isCompleted(Number(chapter));
       return `
         <article class="badge-card ${done ? "earned" : "locked-badge"}">
+          <div class="badge-card-number">${done ? `Chapter ${chapter.padStart(2, "0")}` : "Hidden Chapter"}</div>
           <div class="badge-orb ${meta.artClass}">${done ? `0${chapter}` : "?"}</div>
           <h3>${done ? meta.badge : "Locked Stamp"}</h3>
           <p>${done ? meta.summary : `Complete Chapter ${chapter} to unlock this folktale stamp.`}</p>
+          <div class="badge-card-footer">${done ? meta.stamp : "Awaiting unlock"}</div>
         </article>
       `;
     })
     .join("");
+}
+
+function getChapterPalette(chapter) {
+  const palettes = {
+    1: { accent: "#5b9c82", soft: "#e3f3e9", paper: "#f7fbf4", ink: "#2d584a" },
+    2: { accent: "#7b8dd3", soft: "#edf0ff", paper: "#f8f7ff", ink: "#4f5488" },
+    3: { accent: "#7ca853", soft: "#edf7df", paper: "#fbfcf2", ink: "#49662f" },
+    4: { accent: "#d27d7a", soft: "#ffebe8", paper: "#fff8f6", ink: "#864745" },
+    5: { accent: "#4c9d93", soft: "#e3f6f2", paper: "#f4fcfb", ink: "#2f6660" },
+    6: { accent: "#9f8964", soft: "#f3ede0", paper: "#fbf8f1", ink: "#64553b" },
+    7: { accent: "#7e96d8", soft: "#edf2ff", paper: "#f7f8ff", ink: "#495b8c" },
+    8: { accent: "#4fb19a", soft: "#e1f7f1", paper: "#f4fcfa", ink: "#2d6f60" },
+    9: { accent: "#c99047", soft: "#fff1db", paper: "#fffbf2", ink: "#815522" },
+  };
+
+  return palettes[chapter] || { accent: "#2fb6a3", soft: "#e6f8f4", paper: "#fffaf1", ink: "#245e5a" };
 }
 
 function enhanceStoryVideo(meta) {
@@ -469,10 +487,17 @@ function enhanceStoryPage() {
   const meta = CHAPTERS[chapter];
   const hero = document.querySelector(".story-hero");
   const box = document.querySelector(".story-box");
+  const palette = getChapterPalette(chapter);
 
   if (!meta || !hero || hero.querySelector(".story-cover")) {
     return;
   }
+
+  document.body.style.setProperty("--chapter-accent", palette.accent);
+  document.body.style.setProperty("--chapter-accent-soft", palette.soft);
+  document.body.style.setProperty("--chapter-paper", palette.paper);
+  document.body.style.setProperty("--chapter-ink", palette.ink);
+  document.body.classList.add("story-themed");
 
   hero.insertAdjacentHTML(
     "beforeend",
@@ -529,6 +554,30 @@ function initOpeningScene() {
       await AudioEngine.unlock();
       AudioEngine.startAmbient();
     }
+  });
+}
+
+function initIntroArtMotion() {
+  const art = document.querySelector(".intro-art");
+  const title = art?.querySelector(".art-title");
+
+  if (!art || !title || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+
+  const updateMotion = (event) => {
+    const bounds = art.getBoundingClientRect();
+    const offsetX = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const offsetY = (event.clientY - bounds.top) / bounds.height - 0.5;
+
+    art.style.setProperty("--hero-shift-x", `${offsetX * 14}px`);
+    art.style.setProperty("--hero-shift-y", `${offsetY * 10}px`);
+  };
+
+  art.addEventListener("pointermove", updateMotion);
+  art.addEventListener("pointerleave", () => {
+    art.style.setProperty("--hero-shift-x", "0px");
+    art.style.setProperty("--hero-shift-y", "0px");
   });
 }
 
@@ -802,6 +851,7 @@ function initHome() {
   const completionBanner = document.querySelector("[data-completion-banner]");
 
   decorateQuizCards();
+  initIntroArtMotion();
   renderContinueJourney();
   renderBadges();
 
@@ -899,6 +949,7 @@ function initFinalPage() {
   const gate = document.querySelector("[data-final-gate]");
   const content = document.querySelector("[data-final-content]");
   const summary = document.querySelector("[data-final-summary]");
+  const stats = document.querySelector("[data-final-stats]");
 
   if (!isCompleted(TOTAL_CHAPTERS)) {
     gate.hidden = false;
@@ -909,8 +960,16 @@ function initFinalPage() {
   gate.hidden = true;
   content.hidden = false;
 
+  if (stats) {
+    stats.innerHTML = `
+      <div class="final-stat"><strong>${TOTAL_CHAPTERS}</strong><span>Legends Completed</span></div>
+      <div class="final-stat"><strong>${Object.keys(CHAPTERS).length}</strong><span>Stamps Collected</span></div>
+      <div class="final-stat"><strong>1</strong><span>Full Folktale Journey</span></div>
+    `;
+  }
+
   if (summary) {
-    summary.textContent = `${completedCount()} of ${TOTAL_CHAPTERS} chapters completed in this session. Every folktale stamp has been earned.`;
+    summary.textContent = `${completedCount()} of ${TOTAL_CHAPTERS} chapters were completed in this session, and every folktale stamp now sits together in your story collection.`;
   }
 
   renderBadges();
