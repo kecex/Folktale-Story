@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Legend Hunter | Interactive Story Quest</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="script.js"></script>
+  </head>
+  <body data-page="home">
+    <div id="welcome-overlay" class="overlay" hidden>
+      <div class="popup-card">
+        <div class="header-pill">OPENING SCENE</div>
+        <h1>Welcome Explorer!</h1>
+        <p>The legends of Malaysia are waiting to be discovered. Are you ready to start your journey?</p>
+        <button id="close-welcome" class="start-btn">Begin the journey</button>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="container header-bar">
+        <div class="brand">
+          <div class="brand-mark">LH</div>
+          <div>
+            <p>Legend Hunter</p>
+            <h1>Malaysian Folktales With Interactive Story Quest</h1>
+          </div>
+        </div>
+
+        <nav class="site-nav" aria-label="Page navigation">
+          <a href="#gallery">Gallery</a>
+		  <a href="#quiz">Quiz</a>
+		  <a href="#badges">Badges</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+      </div>
+
+      <div class="container">
+        <div class="completion-banner" id="journey-complete" data-completion-banner hidden>
+          <div class="badge">Journey complete</div>
+          <h2>You completed the full demo journey.</h2>
+          <p>
+            All nine chapters are complete for this session. Close the tab or
+            browser to start a new session.
+          </p>
+        </div>
+      </div>
+    </header>
+
+      <div class="container" data-progress-anchor></div>
+
+      <section class="container intro-section" id="journey">
+        <div class="intro-copy">
+          <div class="eyebrow">Interactive Folklore Trail</div>
+          <h2>Move through nine Malaysian legends, one puzzle and one chapter at a time.</h2>
+          <p>
+            Each solved quiz opens a folktale chapter, each completed chapter unlocks the next gate, and each finished legend earns a collectible story stamp.
+          </p>
+          <div class="toolbar">
+            <a class="btn btn-primary" data-continue-link href="story1.html">Continue Journey</a>
+            <a class="btn btn-secondary" href="#badges">View Folktale Badges</a>
+          </div>
+        </div>
+        <div class="intro-art">
+          <div class="guide-mascot">
+            <div class="guide-face"></div>
+            <div class="guide-book"></div>
+            <p>Legenda the Guide</p>
+          </div>
+          <div class="art-moon"></div>
+          <div class="art-cloud art-cloud-a"></div>
+          <div class="art-cloud art-cloud-b"></div>
+          <div class="art-mountain art-mountain-a"></div>
+          <div class="art-mountain art-mountain-b"></div>
+          <div class="art-tree art-tree-a"></div>
+          <div class="art-tree art-tree-b"></div>
+          <div class="art-water"></div>
+          <div class="art-title">
+            <span>Legend Hunter</span>
+            <strong>Journey across mountain, coast, forest, and moonlit kingdom.</strong>
+          </div>
+        </div>
+      </section>
+	  
+	  	 <section class="container gallery-section" id="gallery">
+        <div class="section-heading">
+          <div class="eyebrow">Gallery</div>
+          <h2>Scene gallery from the folktale trail.</h2>
+          <p>Each tile hints at a mood, scene, or motif from Malaysian folktales.</p>
+        </div>
+
+        <div class="gallery-grid">
+			<article class="gallery-card scene-1"><img src="img/puteri gunung ledang 1.jpeg" alt=""><span>01</span><strong>Mountain mist</strong><p>A royal challenge hidden among the clouds.</p></article>
+          <article class="gallery-card scene-2"><img src="img/dayang senandung 1.jpeg" alt=""><span>02</span><strong>Echoes of a Song</strong><p>A voice remembered beyond appearances.</p></article>
+          <article class="gallery-card scene-3"><img src="img/sang kancil 1.jpeg" alt=""><span>03</span><strong>Forest whisper</strong><p>The smallest hero often has the cleverest plan.</p></article>
+          <article class="gallery-card scene-4"><img src="img/mahsuri 1.jpeg" alt=""><span>04</span><strong>White Curse</strong><p>A curse that echoed across generations.</p></article>
+          <article class="gallery-card scene-5"><img src="img/puteri sejinjang dan puteri santubong 1.png" alt=""><span>05</span><strong>Twin Peaks</strong><p>A tale of sisterhood, pride, and destiny.</p></article>
+          <article class="gallery-card scene-6"><img src="img/sang kelembai 1.jpg" alt=""><span>06</span><strong>Stone Memories</strong><p>Ancient rocks hold forgotten stories.</p></article>
+          <article class="gallery-card scene-7"><img src="img/puteri lindungan bulan 1.jpeg" alt=""><span>07</span><strong>Moonlit Secret</strong><p>A princess protected by the light of the moon.</p></article>
+          <article class="gallery-card scene-8"><img src="img/batu belah batu bertangkup 1.png" alt=""><span>08</span><strong>Family First</strong><p>A magical stone that reminds us to cherish family with love and gratitude.</p></article>
+          <article class="gallery-card scene-9"><img src="img/cik siti wan kembang 1.jpg" alt=""><span>09</span><strong>Royal Legacy</strong><p>A ruler remembered through courage and wisdom.</p></article>
+        </div>
+      </section>
+
+
+      <section class="container quiz-section" id="quiz">
+        <div class="section-heading">
+          <div class="eyebrow">Quiz gate</div>
+          <h2>Unlock the tale through a 3x3 folktale grid.</h2>
+          <p>
+            The nine cards below unlock the chapter pages in sequence.
+          </p>
+        </div>
+
+        <div class="quiz-grid">
+          <article class="quiz-card locked" data-chapter-card data-chapter="1" data-puzzle="text" data-answer="Puteri Gunung Ledang">
+            <div class="card-kicker">Chapter 1</div>
+            <h3>The mountain princess</h3>
+            <p class="muted">Type the title of the famous mountain princess legend.</p>
+            <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+            <div class="quiz" data-puzzle-content>
+              <input data-answer-input type="text" placeholder="Your answer" />
+              <button class="btn btn-primary" data-check>Check answer</button>
+              <div class="status" data-status>Solve this to unlock Chapter 1.</div>
+              <a class="btn btn-secondary unlock-link" data-unlock-link href="story1.html" hidden>Open Chapter 1</a>
+            </div>
+          </article>
+
+			<article class="quiz-card locked" data-chapter-card data-chapter="2" data-puzzle="sequence" data-answer="The Prince falls in love with her beautiful voice|The King goes to war and the princess is banished|The truth is revealed and the curse is lifted">
+  			<div class="card-kicker">Chapter 2</div>
+  			<h3>The Voice of Dayang Senandung</h3>
+  			<p class="muted">Click the folktale events in the correct order.</p>
+  			<div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+  			<div class="quiz" data-puzzle-content>
+  			  <div class="options">
+   			   <button class="option" data-step="The King goes to war and the princess is banished">The King goes to war and the princess is banished</button>
+   			   <button class="option" data-step="The Prince falls in love with her beautiful voice">The Prince falls in love with her beautiful voice</button>
+    		  <button class="option" data-step="The truth is revealed and the curse is lifted">The truth is revealed and the curse is lifted</button>
+   			 </div>
+   			 <div class="status" data-status>Finish Chapter 1 first.</div>
+   			 <div class="muted" data-progress></div>
+  			 <a class="btn btn-secondary unlock-link" data-unlock-link href="story2.html" hidden>Open Chapter 2</a>
+ 			 </div>
+			</article>
+
+          <article class="quiz-card locked" data-chapter-card data-chapter="3" data-puzzle="multi" data-answer="Cleverness|Patience">
+            <div class="card-kicker">Chapter 3</div>
+            <h3>Kancil’s lesson</h3>
+            <p class="muted">Select the traits that fit Sang Kancil’s tricks.</p>
+            <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+            <div class="quiz" data-puzzle-content>
+              <label><input data-option-box type="checkbox" value="Cleverness" /> Cleverness</label>
+              <label><input data-option-box type="checkbox" value="Patience" /> Patience</label>
+              <label><input data-option-box type="checkbox" value="Loud shouting" /> Loud shouting</label>
+              <button class="btn btn-primary" data-check>Check selection</button>
+              <div class="status" data-status>Finish Chapter 2 first.</div>
+              <a class="btn btn-secondary unlock-link" data-unlock-link href="story3.html" hidden>Open Chapter 3</a>
+            </div>
+          </article>
+
+          <article class="quiz-card locked" data-chapter-card data-chapter="4" data-puzzle="code" data-answer="7">
+            <div class="card-kicker">Chapter 4</div>
+            <h3>Hidden number</h3>
+            <p class="muted">How many letters are in the word “Mahsuri”?</p>
+            <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+            <div class="quiz" data-puzzle-content>
+              <input data-answer-input type="number" min="1" max="20" placeholder="Enter number" />
+              <button class="btn btn-primary" data-check>Check code</button>
+              <div class="status" data-status>Finish Chapter 3 first.</div>
+              <a class="btn btn-secondary unlock-link" data-unlock-link href="story4.html" hidden>Open Chapter 4</a>
+            </div>
+          </article>
+
+			<article class="quiz-card locked" data-chapter-card data-chapter="5" data-puzzle="match">
+			  <div class="card-kicker">Chapter 5</div>
+			  <h3>Puteri Santubong and Puteri Sejinjang</h3>
+			  <p class="muted">Match the character to their task:</p>
+			  <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+			  <div class="quiz" data-puzzle-content>
+				<div class="match-item">
+				  <span>Puteri Santubong:</span>
+				  <select class="match-select" data-ans="pounding-paddy">
+					<option value="">--Select--</option>
+					<option value="pounding-paddy">Pounding paddy</option>
+					<option value="weaving-cloth">Weaving cloth</option>
+				  </select>
+				</div>
+				<div class="match-item">
+				  <span>Puteri Sejinjang:</span>
+				  <select class="match-select" data-ans="weaving-cloth">
+					<option value="">--Select--</option>
+					<option value="pounding-paddy">Pounding paddy</option>
+					<option value="weaving-cloth">Weaving cloth</option>
+				  </select>
+				</div>
+				<button class="btn btn-primary" data-check>Check answer</button>
+				<div class="status" data-status>Finish Chapter 4 first.</div>
+				<a class="btn btn-secondary unlock-link" data-unlock-link href="story5.html" hidden>Open Chapter 5</a>
+			  </div>
+			</article>
+			
+			<article class="quiz-card locked" data-chapter-card data-chapter="6" data-puzzle="mcq" data-answer="Turned into stone">
+			  <div class="card-kicker">Chapter 6</div>
+			  <h3>The Legend of Sang Kelembai</h3>
+			  <p class="muted">What happens to those cursed by Sang Kelembai?</p>
+				<div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+			  <div class="quiz" data-puzzle-content>
+				<div class="mcq-options">
+				  <label><input type="radio" name="q6" value="Turned into gold"> Turned into gold</label><br>
+				  <label><input type="radio" name="q6" value="Turned into stone"> Turned into stone</label><br>
+				  <label><input type="radio" name="q6" value="Turned into wood"> Turned into wood</label>
+				</div>
+				<button class="btn btn-primary" data-check>Check answer</button>
+				<div class="status" data-status>Finish Chapter 5 first.</div>
+				<a class="btn btn-secondary unlock-link" data-unlock-link href="story6.html" hidden>Open Chapter 6</a>
+			  </div>
+			</article>
+
+			<article class="quiz-card locked" data-chapter-card data-chapter="7" data-puzzle="scenario" data-answer="Hide her in the glow of the moon">
+			  <div class="card-kicker">Chapter 7</div>
+			  <h3>Puteri Lindungan Bulan</h3>
+			  <p class="muted">Choose the legendary action taken to protect the princess.</p>
+			  <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+			  <div class="quiz" data-puzzle-content>
+				<div class="mcq-options">
+				  <label><input type="radio" name="q7" value="Hide her in the deepest dungeon" /> Hide her in the deepest dungeon.</label><br>
+				  <label><input type="radio" name="q7" value="Hide her in the glow of the moon" /> Hide her in the glow of the moon.</label><br>
+				  <label><input type="radio" name="q7" value="Send her away to a foreign land" /> Send her away to a foreign land.</label>
+				</div>
+				<button class="btn btn-primary" data-check>Check answer</button>
+				<div class="status" data-status>Finish Chapter 6 first.</div>
+				<a class="btn btn-secondary unlock-link" data-unlock-link href="story7.html" hidden>Open Chapter 7</a>
+			  </div>
+			</article>
+
+			<article class="quiz-card locked" data-chapter-card data-chapter="8" data-puzzle="wordsearch" data-answer="BATU">
+			  <div class="card-kicker">Chapter 8</div>
+			  <h3>Can you uncover the hidden word that represents the heart of this legend?</h3>
+			  <p class="muted">Select the letters that form the hidden word.</p>
+			  <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+			  <div class="quiz" data-puzzle-content>
+				<div class="word-grid">
+				  <button class="word-btn" type="button" data-val="B">B</button>
+				  <button class="word-btn" type="button" data-val="A">A</button>
+				  <button class="word-btn" type="button" data-val="T">T</button>
+				  <button class="word-btn" type="button" data-val="U">U</button>
+				  <button class="word-btn" type="button" data-val="N">N</button>
+				  <button class="word-btn" type="button" data-val="G">G</button>
+				  <button class="word-btn" type="button" data-val="R">R</button>
+				  <button class="word-btn" type="button" data-val="L">L</button>
+				  <button class="word-btn" type="button" data-val="E">E</button>
+				</div>
+				<p class="muted">Word: <span data-word></span></p>
+				<button class="btn btn-primary" data-check>Check answer</button>
+				<div class="status" data-status>Finish Chapter 7 first.</div>
+				<a class="btn btn-secondary unlock-link" data-unlock-link href="story8.html" hidden>Open Chapter 8</a>
+			  </div>
+			</article>
+
+			<article class="quiz-card locked" data-chapter-card data-chapter="9" data-puzzle="fill-blank" data-answer="kijang|kelantan">
+			  <div class="card-kicker">Chapter 9</div>
+			  <h3>Cik Siti Wan Kembang</h3>
+			  <p class="muted">Complete the legend with the missing words.</p>
+			  <div class="locked-note" data-locked-note hidden>Complete the previous chapter to reveal this puzzle.</div>
+			  <div class="quiz" data-puzzle-content>
+				<p class="story-text">
+				  Cik Siti Wan Kembang was a legendary queen known for her wisdom. She was famously accompanied by a
+				  <input type="text" data-blank="1" placeholder="?" />
+				  that served as a symbol of loyalty and the emblem of the state of
+				  <input type="text" data-blank="2" placeholder="?" />.
+				</p>
+				<button class="btn btn-primary" data-check>Check answer</button>
+				<div class="status" data-status>Finish Chapter 8 first.</div>
+				<a class="btn btn-secondary unlock-link" data-unlock-link href="story9.html" hidden>Open Chapter 9</a>
+			  </div>
+			</article>
+			</div>
+		  </section>
+	  
+      <section class="container badges-section" id="badges">
+        <div class="section-heading">
+          <div class="eyebrow">Collectible Badges</div>
+          <h2>Earn a stamp for every legend you complete.</h2>
+          <p>Each chapter rewards a themed folktale badge, turning progress into a visible collection.</p>
+        </div>
+
+        <div class="badge-grid" data-badge-grid></div>
+      </section>
+
+      <footer class="contact-section" id="contact">
+          <div class="footer-divider"></div>
+          <div class="footer-bottom">
+            <div class="social-row" aria-label="Social links">
+              <a href="#" aria-label="Instagram">ig</a>
+            </div>
+
+            <p class="footer-copy">
+              © 2026 Legend Hunter. All rights reserved.
+            </p>
+		  </div>
+      </footer>
+  </body>
+</html>
